@@ -1,0 +1,104 @@
+import random
+
+class Square:
+    def _init_(self, position):
+        self.position = position
+        self.snake_to = None
+        self.ladder_to = None
+
+class GameBoard:
+    def _init_(self, size):
+        self.size = size
+        self.squares = [Square(i) for i in range(1, size + 1)]
+        self.snakes = {}
+        self.ladders = {}
+        self.place_snakes_and_ladders()
+
+    def place_snakes_and_ladders(self):
+        
+        for _ in range(5):  
+            start, end = random.sample(range(2, self.size), 2)
+            if start < end:
+                if start not in self.ladders and start not in self.snakes and end not in self.snakes.values():
+                    self.squares[start - 1].ladder_to = end
+                    self.ladders[start] = end
+            elif start > end:
+                if start not in self.snakes and start not in self.ladders and end not in self.ladders.values():
+                    self.squares[start - 1].snake_to = end
+                    self.snakes[start] = end
+
+    def get_final_position(self, position):
+        square = self.squares[position - 1]
+        if square.snake_to:
+            return square.snake_to
+        elif square.ladder_to:
+            return square.ladder_to
+        return position
+
+class Player:
+    def _init_(self, name):
+        self.name = name
+        self.position = 1
+        self.turns = 0
+
+    def move(self, dice_roll, board):
+        new_position = self.position + dice_roll
+        if new_position <= board.size:
+            self.position = board.get_final_position(new_position)
+        self.turns += 1
+
+class Dice:
+    def roll(self):
+        return random.randint(1, 6)
+
+class Game:
+    def _init_(self, board_size, player_names):
+        self.game_board = GameBoard(board_size)
+        self.dice = Dice()
+        self.players = [Player(name) for name in player_names]
+        self.finished_players = []
+
+    def is_game_over(self):
+        return len(self.finished_players) == len(self.players)
+
+    def play_turn(self, player):
+        dice_roll = self.dice.roll()
+        player.move(dice_roll, self.game_board)
+        print(f"{player.name} rolled a {dice_roll} and moved to {player.position}")
+        if player.position == self.game_board.size and player not in self.finished_players:
+            self.finished_players.append(player)
+            print(f"{player.name} has finished the game!")
+
+    def display_board(self):
+        board_state = ["_" for _ in range(self.game_board.size)]
+        for player in self.players:
+            if player.position <= self.game_board.size:
+                board_state[player.position - 1] = player.name[0]  
+        print("Board State:", ' '.join(board_state))
+
+    def print_final_results(self):
+        print("\nGame Over!")
+        print("Results:")
+        for rank, player in enumerate(self.finished_players, start=1):
+            print(f"{rank}. {player.name} - Turns: {player.turns}")
+        remaining_player = [p for p in self.players if p not in self.finished_players][0]
+        print(f"Loser: {remaining_player.name} - Position: {remaining_player.position}, Turns: {remaining_player.turns}")
+
+    def start(self):
+        while len(self.finished_players) < len(self.players):
+            for player in self.players:
+                if player not in self.finished_players:
+                    self.play_turn(player)
+                    self.display_board()
+                if len(self.finished_players) == len(self.players):
+                    break
+        self.print_final_results()
+
+if _name_ == "_main_":
+   
+    board_size = int(input("Enter the board size (MxN as a single integer): "))
+    num_players = int(input("Enter the number of players (minimum 2): "))
+    player_names = [input(f"Enter name for player {i + 1}: ") for i in range(num_players)]
+
+    game = Game(board_size, player_names)
+    game.start()
